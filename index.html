@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101827"><title>نبض بورس</title>
+<style>
+:root{color-scheme:dark;--bg:#09111e;--panel:#131f30;--panel2:#0d1726;--line:#26374e;--muted:#a7b6ca;--green:#22c55e;--red:#ef4444;--orange:#f59e0b;--blue:#60a5fa}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#edf4ff;font:14px Tahoma,Arial,sans-serif}header{position:sticky;top:0;z-index:3;background:#101a29;border-bottom:1px solid var(--line);padding:13px 15px}.top{max-width:1000px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:10px}h1{font-size:20px;margin:0}main{max-width:1000px;margin:auto;padding:12px}.muted,.hint{color:var(--muted)}.hint{font-size:12px;line-height:1.9}.panel{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:13px;margin:10px 0}.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}button{border:0;border-radius:9px;background:#2563eb;color:white;padding:10px 13px;font-weight:bold;cursor:pointer}button.alt{background:#334155}button.danger{background:#7f1d1d}input,select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:white;padding:10px;min-width:0}input[type=text]{flex:1;width:100%}.stock{padding:12px 2px;border-bottom:1px solid var(--line)}.stock:last-child{border:0}.stockhead{display:flex;align-items:center;justify-content:space-between;gap:8px}.stockname{font-size:16px;font-weight:bold}.stock button{padding:8px 11px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tile{background:var(--panel2);border:1px solid #1e2d41;border-radius:9px;padding:9px;min-width:0}.tile span{display:block;color:var(--muted);font-size:12px}.tile b{display:block;margin-top:6px;font-size:15px;overflow-wrap:anywhere}.green{color:var(--green)}.red{color:var(--red)}.orange{color:var(--orange)}.blue{color:var(--blue)}h2{font-size:17px;margin:4px 0 12px}h3{font-size:14px;margin:15px 0 9px}.hidden{display:none!important}.tag{font-size:11px;padding:4px 7px;border-radius:20px;background:#26364d;color:#dce8f7}.back{margin-bottom:10px}.alertrow{display:flex;gap:8px;align-items:center;justify-content:space-between;background:var(--panel2);padding:9px;border-radius:8px;margin:6px 0}.alertrow label{display:flex;align-items:center;gap:8px}.status{padding:10px;background:var(--panel2);border-radius:9px;line-height:1.9;margin-top:9px}.sectionhead{display:flex;justify-content:space-between;align-items:center;gap:8px}.empty{padding:18px;text-align:center;color:var(--muted)}@media(min-width:650px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+</style></head>
+<body>
+<header><div class="top"><div><h1>نبض بورس</h1><small class="muted">دیده‌بان و صفحه اختصاصی نمادها</small></div><span class="tag" id="clock">به‌روزرسانی: خودکار ۳۰ ثانیه</span></div></header>
+<main>
+<section id="home">
+ <div class="panel">
+  <div class="sectionhead"><h2>دیده‌بان نمادها</h2><span class="tag" id="connection">اتصال بررسی نشده</span></div>
+  <div class="toolbar"><input id="newSymbol" type="text" placeholder="افزودن نماد؛ مثال: خودرو"><button id="addSymbol">افزودن نماد</button><button class="alt" id="checkConn">آزمایش TSETMC</button></div>
+  <div id="connStatus" class="status hint">قیمت‌ها تا زمان اتصال و دریافت داده معتبر، با خط تیره نمایش داده می‌شوند؛ عدد ساختگی نمایش داده نمی‌شود.</div>
+  <div id="watchlist"></div>
+ </div>
+ <div class="panel"><h2>راهنمای رنگ‌ها</h2><div class="toolbar"><b class="green">خرید / ورود پول</b><b class="red">فروش / خروج پول</b><b class="orange">هشدار / واگرایی</b></div><p class="hint">برای دیدن همه جزئیات، روی «صفحه سهم» بزنید.</p></div>
+</section>
+<section id="detail" class="hidden">
+ <button class="alt back" id="back">← بازگشت به دیده‌بان</button>
+ <div class="panel">
+  <div class="sectionhead"><div><h2 id="detailTitle">صفحه سهم</h2><span class="hint" id="detailSub">اطلاعات نماد</span></div><span class="tag">به‌روزرسانی ۳۰ ثانیه</span></div>
+  <h3>قیمت و معاملات</h3><div class="grid" id="priceGrid"></div>
+  <h3>خرید و فروش حقیقی و حقوقی</h3><div class="grid" id="flowGrid"></div>
+  <h3>قدرت و جریان پول</h3><div class="grid" id="moneyGrid"></div>
+  <h3>تحلیل تکنیکال و رفتار سهم</h3><div class="grid" id="techGrid"></div>
+  <h3>جمع‌بندی و پیشنهاد سیستم</h3><div class="status" id="recommendation">پس از دریافت داده معتبر و سابقه کافی، پیشنهاد تحلیلی نمایش داده می‌شود.</div>
+  <h3>هشدارهای این نماد</h3><div id="symbolAlerts"></div>
+  <p class="hint">مقادیر تحلیلی و پیشنهادها در این نسخه تا زمان پیاده‌سازی منبع داده معتبر، خالی می‌مانند. این نسخه به‌تنهایی سیگنال خرید یا فروش تولید نمی‌کند.</p>
+ </div>
+</section>
+</main>
+<script>
+const STORE='nabz_bourse_full_prototype_v2';
+let db=JSON.parse(localStorage.getItem(STORE)||'null')||{symbols:['وبملت','فولاد','شستا'],alerts:{}};
+let current=null,connTimer=null;
+const alertNames=['ورود پول هوشمند','خروج سنگین پول','حجم مشکوک','فرصت خروج'];
+const groups={
+ price:[['قیمت لحظه‌ای','—'],['قیمت پایانی','—'],['اولین قیمت','—'],['بیشترین قیمت','—'],['کمترین قیمت','—'],['آخرین معامله','—'],['درصد تغییر','—'],['ارزش معاملات','—'],['حجم معاملات امروز','—'],['تعداد معاملات','—'],['میانگین حجم ۳۰ روز معاملاتی','—'],['شناوری سهم','—']],
+ flow:[['خرید حقیقی','—','green'],['خرید حقوقی','—','green'],['فروش حقیقی','—','red'],['فروش حقوقی','—','red'],['تعداد خریداران حقیقی','—'],['تعداد فروشندگان حقیقی','—'],['تعداد خریداران حقوقی','—'],['تعداد فروشندگان حقوقی','—']],
+ money:[['قدرت خریدار به فروشنده','—'],['سرانه خرید حقیقی','—'],['سرانه فروش حقیقی','—'],['ورود پول حقیقی','—','green'],['خروج پول حقیقی','—','red'],['سرعت ورود/خروج پول','—'],['ارزش صف خرید','—','green'],['ارزش صف فروش','—','red']],
+ tech:[['RSI','—'],['MACD','—'],['واگرایی RSI','در انتظار داده','orange'],['واگرایی MACD','در انتظار داده','orange'],['واگرایی قیمت و حجم','در انتظار داده','orange'],['حمایت اول و دوم','—'],['مقاومت اول و دوم','—'],['شکست حمایت/مقاومت','—'],['وضعیت روند','—'],['ریسک نوسان','—']]
+};
+function save(){localStorage.setItem(STORE,JSON.stringify(db))}
+function ensure(s){if(!db.alerts[s])db.alerts[s]=[true,true,true,true]}
+function el(id){return document.getElementById(id)}
+function tile(item){return `<div class="tile"><span>${item[0]}</span><b class="${item[2]||'muted'}">${item[1]}</b></div>`}
+function renderHome(){el('watchlist').innerHTML=db.symbols.map(s=>{ensure(s);return `<div class="stock"><div class="stockhead"><div><div class="stockname">${s}</div><small class="muted">قیمت لحظه‌ای: —　|　قیمت پایانی: —</small></div><button data-open="${s}">صفحه سهم ←</button></div><div class="toolbar" style="margin-top:8px"><span class="tag">۴ هشدار ${db.alerts[s].every(Boolean)?'فعال':'قابل تنظیم'}</span><button class="danger" data-remove="${s}">حذف</button></div></div>`}).join('')||'<div class="empty">هنوز نمادی اضافه نشده است.</div>';
+ document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openDetail(b.dataset.open));
+ document.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{let s=b.dataset.remove;db.symbols=db.symbols.filter(x=>x!==s);delete db.alerts[s];save();renderHome()});
+ save()}
+function renderGroup(id,arr){el(id).innerHTML=arr.map(tile).join('')}
+function openDetail(s){current=s;ensure(s);el('home').classList.add('hidden');el('detail').classList.remove('hidden');el('detailTitle').textContent='صفحه اختصاصی '+s;el('detailSub').textContent='اطلاعات تابلو، جریان پول و تحلیل '+s;renderGroup('priceGrid',groups.price);renderGroup('flowGrid',groups.flow);renderGroup('moneyGrid',groups.money);renderGroup('techGrid',groups.tech);el('recommendation').textContent='پیشنهاد خرید / نگهداری / خروج پس از دریافت قیمت، سابقه معاملات و محاسبه شاخص‌ها ارائه می‌شود. فعلاً داده معتبر برای نتیجه‌گیری موجود نیست.';
+ el('symbolAlerts').innerHTML=alertNames.map((a,i)=>`<div class="alertrow"><label><input type="checkbox" data-alert="${i}" ${db.alerts[s][i]?'checked':''}>${a}</label><span class="tag">${db.alerts[s][i]?'فعال':'خاموش'}</span></div>`).join('');
+ document.querySelectorAll('[data-alert]').forEach(c=>c.onchange=()=>{db.alerts[s][+c.dataset.alert]=c.checked;save();openDetail(s)});
+}
+el('back').onclick=()=>{el('detail').classList.add('hidden');el('home').classList.remove('hidden');renderHome()};
+el('addSymbol').onclick=()=>{let s=el('newSymbol').value.trim();if(s&&!db.symbols.includes(s)){db.symbols.push(s);db.alerts[s]=[true,true,true,true];el('newSymbol').value='';save();renderHome()}};
+el('newSymbol').onkeydown=e=>{if(e.key==='Enter')el('addSymbol').click()};
+async function check(){el('connection').textContent='در حال بررسی…';el('connStatus').textContent='در حال درخواست آزمایشی از TSETMC…';
+ try{let ctrl=new AbortController(),t=setTimeout(()=>ctrl.abort(),10000);let r=await fetch('https://cdn.tsetmc.com/api/ClientType/GetClientTypeAll',{cache:'no-store',signal:ctrl.signal});clearTimeout(t);if(!r.ok)throw Error('HTTP '+r.status);let x=await r.text();if(x.length<10)throw Error('پاسخ نامعتبر');el('connection').textContent='دسترسی آزمایشی برقرار';el('connStatus').textContent='پاسخ سرور دریافت شد. این مسیر فقط برای آزمایش دسترسی است و به‌تنهایی قیمت نمادها را فراهم نمی‌کند.'}
+ catch(e){el('connection').textContent='دسترسی ناموفق';el('connStatus').textContent='مرورگر نتوانست پاسخ قابل‌خواندن بگیرد ('+(e.name==='AbortError'?'پایان مهلت درخواست':e.message)+'). احتمال محدودیت شبکه یا CORS وجود دارد.'}}
+el('checkConn').onclick=check;
+renderHome();check();setInterval(()=>{check();el('clock').textContent='آخرین بررسی: '+new Date().toLocaleTimeString('fa-IR')},30000);
+</script></body></html>
