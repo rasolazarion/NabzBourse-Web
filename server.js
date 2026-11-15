@@ -2,7 +2,11 @@ import express from "express";
 
 const app = express();
 const PORT = process.env.PORT || 10000;
-const API = "https://cdn.tsetmc.com/api";
+const APIS = [
+  "https://cdn.tsetmc.com/api",
+  "https://cdn10.tsetmc.com/api",
+  "http://cdn.tsetmc.com/api"
+];
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "https://nabzbourse-web.onrender.com";
 
 app.use((req, res, next) => {
@@ -18,18 +22,31 @@ app.use((req, res, next) => {
 });
 
 const cache = new Map();
+
 async function tse(path) {
-  const url = `${API}/${path}`;
-  const response = await fetch(url, {
-    headers: {
-      "Accept": "application/json, text/plain, */*",
-      "User-Agent": "Mozilla/5.0 (compatible; NabzBourse/1.0)"
-    },
-    signal: AbortSignal.timeout(12000)
-  });
-  if (!response.ok) throw new Error(`TSETMC HTTP ${response.status}`);
-  return response.json();
+  let lastError;
+  for (const base of APIS) {
+    try {
+      const response = await fetch(`${base}/${path}`, {
+        method: "GET",
+        redirect: "follow",
+        headers: {
+          "Accept": "application/json, text/plain, */*",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+          "Referer": "https://www.tsetmc.com/",
+          "Origin": "https://www.tsetmc.com"
+        },
+        signal: AbortSignal.timeout(10000)
+      });
+      if (!response.ok) throw new Error(`${base} returned HTTP ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw new Error(`تمام نشانی‌های TSETMC ناموفق بودند: ${lastError?.message || "unknown fetch error"}`);
 }
+
 function unwrap(data, key) {
   return data?.[key] ?? data?.[key[0].toLowerCase() + key.slice(1)] ?? null;
 }
@@ -108,7 +125,7 @@ app.get("/api/quote/:symbol", async (req, res) => {
         price: {
           last, close, first: num(p.priceFirst), high: num(p.priceMax),
           low: num(p.priceMin), yesterday, changePct,
-          marketCap: num(p.qTotCap), volume: null, value: null, trades: num(p.zTotTran),
+          marketCap: num(p.qTotCap), volume: num(p.qTotTran5J), value: num(p.qTotCap), trades: num(p.zTotTran),
           averageVolume5d: num(info.qTotTran5JAvg), freeFloat: num(info.kAjCapValCpsIdx)
         },
         clients: {
