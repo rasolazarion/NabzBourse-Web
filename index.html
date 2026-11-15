@@ -13,8 +13,8 @@
 <section id="home">
  <div class="panel">
   <div class="sectionhead"><h2>دیده‌بان نمادها</h2><span class="tag" id="connection">اتصال بررسی نشده</span></div>
-  <div class="toolbar"><input id="newSymbol" type="text" placeholder="افزودن نماد؛ مثال: خودرو"><button id="addSymbol">افزودن نماد</button><button class="alt" id="checkConn">آزمایش TSETMC</button></div>
-  <div id="connStatus" class="status hint">قیمت‌ها تا زمان اتصال و دریافت داده معتبر، با خط تیره نمایش داده می‌شوند؛ عدد ساختگی نمایش داده نمی‌شود.</div>
+  <div class="toolbar"><input id="newSymbol" type="text" placeholder="افزودن نماد؛ مثال: خودرو"><button id="addSymbol">افزودن نماد</button><button class="alt" id="checkConn">آزمایش اتصال</button></div>
+  <div id="connStatus" class="status hint">قیمت‌ها تا زمان دریافت داده معتبر، با خط تیره نمایش داده می‌شوند؛ عدد ساختگی نمایش داده نمی‌شود.</div>
   <div id="watchlist"></div>
  </div>
  <div class="panel"><h2>راهنمای رنگ‌ها</h2><div class="toolbar"><b class="green">خرید / ورود پول</b><b class="red">فروش / خروج پول</b><b class="orange">هشدار / واگرایی</b></div><p class="hint">برای دیدن همه جزئیات، روی «صفحه سهم» بزنید.</p></div>
@@ -29,14 +29,15 @@
   <h3>تحلیل تکنیکال و رفتار سهم</h3><div class="grid" id="techGrid"></div>
   <h3>جمع‌بندی و پیشنهاد سیستم</h3><div class="status" id="recommendation">پس از دریافت داده معتبر و سابقه کافی، پیشنهاد تحلیلی نمایش داده می‌شود.</div>
   <h3>هشدارهای این نماد</h3><div id="symbolAlerts"></div>
-  <p class="hint">مقادیر تحلیلی و پیشنهادها در این نسخه تا زمان پیاده‌سازی منبع داده معتبر، خالی می‌مانند. این نسخه به‌تنهایی سیگنال خرید یا فروش تولید نمی‌کند.</p>
+  <p class="hint">شاخص‌های تکنیکال و سیگنال‌ها تا زمان پیاده‌سازی محاسبات معتبر، خالی می‌مانند. این نسخه به‌تنهایی سیگنال خرید یا فروش تولید نمی‌کند.</p>
  </div>
 </section>
 </main>
 <script>
 const STORE='nabz_bourse_full_prototype_v2';
+const API_BASE='https://YOUR-API-SERVICE.onrender.com';
 let db=JSON.parse(localStorage.getItem(STORE)||'null')||{symbols:['وبملت','فولاد','شستا'],alerts:{}};
-let current=null,connTimer=null;
+let current=null;
 const alertNames=['ورود پول هوشمند','خروج سنگین پول','حجم مشکوک','فرصت خروج'];
 const groups={
  price:[['قیمت لحظه‌ای','—'],['قیمت پایانی','—'],['اولین قیمت','—'],['بیشترین قیمت','—'],['کمترین قیمت','—'],['آخرین معامله','—'],['درصد تغییر','—'],['ارزش معاملات','—'],['حجم معاملات امروز','—'],['تعداد معاملات','—'],['میانگین حجم ۳۰ روز معاملاتی','—'],['شناوری سهم','—']],
@@ -47,22 +48,37 @@ const groups={
 function save(){localStorage.setItem(STORE,JSON.stringify(db))}
 function ensure(s){if(!db.alerts[s])db.alerts[s]=[true,true,true,true]}
 function el(id){return document.getElementById(id)}
+function fmt(v){return v==null?'—':Number(v).toLocaleString('fa-IR',{maximumFractionDigits:2})}
+function pct(v){return v==null?'—':Number(v).toLocaleString('fa-IR',{maximumFractionDigits:2})+'٪'}
+async function api(path){const r=await fetch(API_BASE.replace(/\/+$/,'')+path);const j=await r.json();if(!r.ok)throw Error(j.detail||j.error||'خطا در دریافت داده');return j}
 function tile(item){return `<div class="tile"><span>${item[0]}</span><b class="${item[2]||'muted'}">${item[1]}</b></div>`}
-function renderHome(){el('watchlist').innerHTML=db.symbols.map(s=>{ensure(s);return `<div class="stock"><div class="stockhead"><div><div class="stockname">${s}</div><small class="muted">قیمت لحظه‌ای: —　|　قیمت پایانی: —</small></div><button data-open="${s}">صفحه سهم ←</button></div><div class="toolbar" style="margin-top:8px"><span class="tag">۴ هشدار ${db.alerts[s].every(Boolean)?'فعال':'قابل تنظیم'}</span><button class="danger" data-remove="${s}">حذف</button></div></div>`}).join('')||'<div class="empty">هنوز نمادی اضافه نشده است.</div>';
+function renderGroup(id,arr){el(id).innerHTML=arr.map(tile).join('')}
+function renderHome(){el('watchlist').innerHTML=db.symbols.map(s=>{ensure(s);return `<div class="stock"><div class="stockhead"><div><div class="stockname">${s}</div><small class="muted">در حال دریافت قیمت…</small></div><button data-open="${s}">صفحه سهم ←</button></div><div class="toolbar" style="margin-top:8px"><span class="tag">۴ هشدار ${db.alerts[s].every(Boolean)?'فعال':'قابل تنظیم'}</span><button class="danger" data-remove="${s}">حذف</button></div></div>`}).join('')||'<div class="empty">هنوز نمادی اضافه نشده است.</div>';
  document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openDetail(b.dataset.open));
  document.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{let s=b.dataset.remove;db.symbols=db.symbols.filter(x=>x!==s);delete db.alerts[s];save();renderHome()});
- save()}
-function renderGroup(id,arr){el(id).innerHTML=arr.map(tile).join('')}
-function openDetail(s){current=s;ensure(s);el('home').classList.add('hidden');el('detail').classList.remove('hidden');el('detailTitle').textContent='صفحه اختصاصی '+s;el('detailSub').textContent='اطلاعات تابلو، جریان پول و تحلیل '+s;renderGroup('priceGrid',groups.price);renderGroup('flowGrid',groups.flow);renderGroup('moneyGrid',groups.money);renderGroup('techGrid',groups.tech);el('recommendation').textContent='پیشنهاد خرید / نگهداری / خروج پس از دریافت قیمت، سابقه معاملات و محاسبه شاخص‌ها ارائه می‌شود. فعلاً داده معتبر برای نتیجه‌گیری موجود نیست.';
- el('symbolAlerts').innerHTML=alertNames.map((a,i)=>`<div class="alertrow"><label><input type="checkbox" data-alert="${i}" ${db.alerts[s][i]?'checked':''}>${a}</label><span class="tag">${db.alerts[s][i]?'فعال':'خاموش'}</span></div>`).join('');
- document.querySelectorAll('[data-alert]').forEach(c=>c.onchange=()=>{db.alerts[s][+c.dataset.alert]=c.checked;save();openDetail(s)});
-}
-el('back').onclick=()=>{el('detail').classList.add('hidden');el('home').classList.remove('hidden');renderHome()};
+ save();refreshWatchlist()}
+async function refreshWatchlist(){for(const symbol of db.symbols){try{const q=await api('/api/quote/'+encodeURIComponent(symbol));const node=[...document.querySelectorAll('.stock')].find(x=>x.querySelector('.stockname')?.textContent===symbol);const small=node?.querySelector('small');if(small)small.textContent=`آخرین معامله: ${fmt(q.price.last)} | پایانی: ${fmt(q.price.close)} | تغییر: ${pct(q.price.changePct)}`}catch(e){const node=[...document.querySelectorAll('.stock')].find(x=>x.querySelector('.stockname')?.textContent===symbol);const small=node?.querySelector('small');if(small)small.textContent='داده دریافت نشد؛ اتصال API را بررسی کنید.'}}}
+async function refreshDetail(symbol){try{const q=await api('/api/quote/'+encodeURIComponent(symbol)),p=q.price,c=q.clients;
+ renderGroup('priceGrid',[
+ ['قیمت لحظه‌ای',fmt(p.last)],['قیمت پایانی',fmt(p.close)],['اولین قیمت',fmt(p.first)],['بیشترین قیمت',fmt(p.high)],['کمترین قیمت',fmt(p.low)],['آخرین معامله',fmt(p.last)],['درصد تغییر',pct(p.changePct)],['ارزش بازار',fmt(p.marketCap)],['حجم معاملات امروز','—'],['تعداد معاملات',fmt(p.trades)],['میانگین حجم ۵ روز',fmt(p.averageVolume5d)],['شناوری سهم',fmt(p.freeFloat)]
+ ]);
+ renderGroup('flowGrid',[
+ ['خرید حقیقی',fmt(c.buyIndividual),'green'],['خرید حقوقی',fmt(c.buyLegal),'green'],['فروش حقیقی',fmt(c.sellIndividual),'red'],['فروش حقوقی',fmt(c.sellLegal),'red'],
+ ['تعداد خریداران حقیقی',fmt(c.buyersIndividual)],['تعداد فروشندگان حقیقی',fmt(c.sellersIndividual)],['تعداد خریداران حقوقی',fmt(c.buyersLegal)],['تعداد فروشندگان حقوقی',fmt(c.sellersLegal)]
+ ]);
+ renderGroup('moneyGrid',[
+ ['قدرت خریدار به فروشنده',fmt(c.buyerPower)],['سرانه خرید حقیقی',c.buyIndividual&&c.buyersIndividual?fmt(c.buyIndividual/c.buyersIndividual):'—'],['سرانه فروش حقیقی',c.sellIndividual&&c.sellersIndividual?fmt(c.sellIndividual/c.sellersIndividual):'—'],
+ ['خالص حجم حقیقی',fmt(c.netIndividualVolume),c.netIndividualVolume==null?'muted':c.netIndividualVolume>=0?'green':'red'],['ورود پول حقیقی','—','green'],['خروج پول حقیقی','—','red'],['ارزش صف خرید','—','green'],['ارزش صف فروش','—','red']
+ ]);
+ el('detailSub').textContent=`اطلاعات تابلو ${q.name||symbol} | منبع: TSETMC | ${new Date(q.updatedAt).toLocaleTimeString('fa-IR')}`;
+ el('recommendation').textContent='داده تابلو دریافت شد؛ برای پیشنهاد تحلیلی، تاریخچه قیمت و محاسبه شاخص‌های تکنیکال هنوز لازم است.';
+ }catch(e){el('recommendation').textContent='دریافت داده از API ناموفق بود: '+e.message}}
+function openDetail(s){current=s;ensure(s);el('home').classList.add('hidden');el('detail').classList.remove('hidden');el('detailTitle').textContent='صفحه اختصاصی '+s;el('detailSub').textContent='در حال دریافت اطلاعات نماد…';renderGroup('priceGrid',groups.price);renderGroup('flowGrid',groups.flow);renderGroup('moneyGrid',groups.money);renderGroup('techGrid',groups.tech);el('recommendation').textContent='در حال دریافت داده معتبر…';el('symbolAlerts').innerHTML=alertNames.map((a,i)=>`<div class="alertrow"><label><input type="checkbox" data-alert="${i}" ${db.alerts[s][i]?'checked':''}>${a}</label><span class="tag">${db.alerts[s][i]?'فعال':'خاموش'}</span></div>`).join('');document.querySelectorAll('[data-alert]').forEach(c=>c.onchange=()=>{db.alerts[s][+c.dataset.alert]=c.checked;save();openDetail(s)});refreshDetail(s)}
+el('back').onclick=()=>{current=null;el('detail').classList.add('hidden');el('home').classList.remove('hidden');renderHome()};
 el('addSymbol').onclick=()=>{let s=el('newSymbol').value.trim();if(s&&!db.symbols.includes(s)){db.symbols.push(s);db.alerts[s]=[true,true,true,true];el('newSymbol').value='';save();renderHome()}};
 el('newSymbol').onkeydown=e=>{if(e.key==='Enter')el('addSymbol').click()};
-async function check(){el('connection').textContent='در حال بررسی…';el('connStatus').textContent='در حال درخواست آزمایشی از TSETMC…';
- try{let ctrl=new AbortController(),t=setTimeout(()=>ctrl.abort(),10000);let r=await fetch('https://cdn.tsetmc.com/api/ClientType/GetClientTypeAll',{cache:'no-store',signal:ctrl.signal});clearTimeout(t);if(!r.ok)throw Error('HTTP '+r.status);let x=await r.text();if(x.length<10)throw Error('پاسخ نامعتبر');el('connection').textContent='دسترسی آزمایشی برقرار';el('connStatus').textContent='پاسخ سرور دریافت شد. این مسیر فقط برای آزمایش دسترسی است و به‌تنهایی قیمت نمادها را فراهم نمی‌کند.'}
- catch(e){el('connection').textContent='دسترسی ناموفق';el('connStatus').textContent='مرورگر نتوانست پاسخ قابل‌خواندن بگیرد ('+(e.name==='AbortError'?'پایان مهلت درخواست':e.message)+'). احتمال محدودیت شبکه یا CORS وجود دارد.'}}
+async function check(){el('connection').textContent='در حال بررسی…';el('connStatus').textContent='در حال بررسی سرویس واسط…';try{const h=await api('/health');if(!h.ok)throw Error('سرویس آماده نیست');el('connection').textContent='API متصل';el('connStatus').textContent='سرویس واسط فعال است. دریافت قیمت هر نماد جداگانه از TSETMC آزمایش می‌شود.'}catch(e){el('connection').textContent='API قطع است';el('connStatus').textContent='اتصال برقرار نشد. ابتدا آدرس API را در index.html جایگزین کنید و سرویس واسط را منتشر کنید.'}}
 el('checkConn').onclick=check;
-renderHome();check();setInterval(()=>{check();el('clock').textContent='آخرین بررسی: '+new Date().toLocaleTimeString('fa-IR')},30000);
+renderHome();check();
+setInterval(()=>{refreshWatchlist();if(current)refreshDetail(current);el('clock').textContent='آخرین بررسی: '+new Date().toLocaleTimeString('fa-IR')},30000);
 </script></body></html>
